@@ -1,7 +1,7 @@
-const dbClient = require('../utils/db');
-const request = require('request');
 const crypto = require('crypto');
-
+const dbClient = require('../utils/db');
+const redisClient = require('../utils/redis');
+const ObjectId = require('mongodb').ObjectId;
 
 function postNew(request, response) {
   const { email, password } = request.body;
@@ -32,7 +32,33 @@ function postNew(request, response) {
   }
 }
 
-function getMe() {
+function getMe(request, response) {
+  const xtoken = request.headers['x-token'];
+  if (!xtoken) {
+    response.status(401).send({'error': 'X-Token missing'});
+  } else {
+    (async () => {
+      try{
+	const key = `auth_${xtoken}`;
+	console.log(key);
+        const userId = await redisClient.get(key);
+	const user = await dbClient.userCollection.findOne({
+	  _id: ObjectId(userId)
+	});
+        console.log(user);
+	if (!user) {
+	  response.status(401).send({'error': 'Unauthorized'});
+	} else {
+	  response.status(200).send({
+	    email: user.email,
+	    id: user._id
+	  });
+	}
+      } catch(error) {
+        console.log(error);
+      }
+    })();
+  }
 }
 
 module.exports = {
