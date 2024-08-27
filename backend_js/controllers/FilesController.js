@@ -46,11 +46,13 @@ function postUpload(request, response) {
 	let file;
         if (parentId) {
           const file = await dbClient.fileCollection.findOne({
-	    parentId: parentId
+	    _id: parentId
 	  });
           if (!file) {
 	    statCode = 400;
 	    message = {'error': 'Parent not found'};
+	    response.status(statCode).send(message)
+	    return;
 	  }
           if (file.type !== 'folder') {
 	    statCode = 400;
@@ -63,43 +65,43 @@ function postUpload(request, response) {
 	}
         if (type === 'folder') {
           const insertedDoc = await dbClient.fileCollection.insertOne({
-	    name: name,
-	    type: type,
-	    parentId: parentId,
-            isPublic: isPublic,
+	    name,
+	    type,
+	    parentId,
+            isPublic,
 	  });
 	  const insertedFile = await dbClient.fileCollection.findOne({
             _id: insertedDoc.insertedId
 	  });
-	  response.status(201).send({insertedFile});
+	  response.status(201).send(insertedFile);
         } else {
           const folderPath = process.env.FOLDER_PATH || '/tmp/files_manager';
-          const storeFolderPath = uuidv4();
-          const localPath = `${folderPath}/${storeFolderPath}`;
-          const parId = parentId || 0; // Optional
-	  const access = isPublic || false;
+          const fileName = uuidv4();
+          const localPath = `${folderPath}/${fileName}`;
+          // const parId = parentId || 0;
+	  // const access = isPublic || false;
           let fileDef = {
 	    userId: user._id,
 	    name,
-            type,//'folder' || 'file' || 'image',
-            isPublic: access,// Optional true or false
-            parentId: parId,// Optional
+            type, //'folder' || 'file' || 'image',
+            isPublic, // Optional true or false
+            parentId, // Optional
             localPath // for type = file | image Base64 of file content
 	  }
-          await dbClient.fileCollection.insertOne(fileDef);
-	  const newFile = await dbClient.fileCollection.findOne({userId: user._id});
+          const instdFile = await dbClient.fileCollection.insertOne(fileDef);
+	  const newFile = await dbClient.fileCollection.findOne({
+            _id: instdFile.insertedId
+	  });
           const decodedData = Buffer.from (data, 'base64').toString('ascii');
 	  if (!fs.existsSync(folderPath)) {
             fs.mkdirSync(folderPath);
 	  }
-          if (!fs.existsSync(localPath)) {
-	    fs.mkdirSync(localPath);
-	  }
-          await fsProm.writeFile(`${localPath}/${name}`, decodedData, (error) => {
+          await fsProm.writeFile(`${localPath}`, decodedData, (error) => {
             console.log(error);
 	  });
           statCode = 201;
 	  message = newFile;
+
           response.status(statCode).send(newFile);
 	}
       })();
