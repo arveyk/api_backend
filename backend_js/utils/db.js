@@ -16,8 +16,8 @@ class DBClient {
     const dbName = 'files_manager';
     this.connect(dbName).then(db => {
       this.db = db;
-      this.fileCollection = this.db.collection('users');
-      this.userCollection = this.db.collection('files');
+      this.fileCollection = this.db.collection('files');
+      this.userCollection = this.db.collection('users');
       return true;
     }).then(() => true).catch((error) => {
       console.log(error);
@@ -38,11 +38,11 @@ class DBClient {
      return this.connectStatus;
   }
 
-  async nbUsers(resolve) {
+  async nbUsers() {
     const NoOfUsers = await this.userCollection.countDocuments();
     return NoOfUsers;
   }
-  async nbFiles(resolve) {
+  async nbFiles() {
     const NoOfFiles = await this.fileCollection.countDocuments();
     return NoOfFiles;
   }

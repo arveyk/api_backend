@@ -27,6 +27,7 @@ class RedisClient {
     try {
       const setexAsync = promisify(this.client.setex).bind(this.client);
       await setexAsync(key, duration, value);
+      console.log(key, value, duration);
        /*(err, result) => {
         if (err) {
           console.error(err);
